@@ -46,7 +46,7 @@ int speedLog[2] = { 170, 200 };
 
 int i1 = 1;
 
-int isReverse = 0;
+bool isReverse = false;
 
 enum commends {
   STOP = 0,
@@ -74,21 +74,24 @@ enum commends {
   CLOCKWISE_BACK_LEFT,
 
   TEST = 101,
-
+  REVERSE = 110,
+  SET_SPEED = 114,
   SKIP = 1000,
 };
 
 enum TIMER_MODES {
-  DURATION = 0,
-  SET,
+  GET_DURATION = 0,
+  START,
   RESET,
 };
 
 enum ERROR_CODES {
   SUCCESS = 0,
+  UNEXPECTED_COMMAND,
   //TIMER
   TIMER_OUT_OF_RANGE = 201,
-
+  //MOTORS
+  
 
 };
 
@@ -130,7 +133,7 @@ void motor3(int isclw = 0, int speed = 255) {
 
 //看其他人是怎麽幹的，是的，一個函數就可以控制3個電機了（原理就是吧之前的三個拼接起來）
 void motors(int speed1, int speed2, int speed3) {
-  if (isReverse == 114) {
+  if (isReverse) {
     speed1 = -speed1;
     speed2 = -speed2;
     speed3 = -speed3;
@@ -145,6 +148,7 @@ void motor_stop() {
   analogWrite(en2, 0);
   analogWrite(en3, 0);
 }
+
 
 //計時器，需要擴展可以改“NoTimeLast”數組的數量
 /*用法：Timer(計時器的序號，要做的事情（0~3）)
@@ -184,6 +188,14 @@ void motor4_stop() {
   Timer(3, 2);
 }
 
+int set_speed() {
+  rotatedSpeed_all = Serial.read();
+  EEPROM.write(5,rotatedSpeed_all);
+  rotatedSpeed_single = Serial.read();
+  EEPROM.write(6,rotatedSpeed_single);
+  return SUCCESS;
+}
+
 void setup() {
   Serial.begin(9600);  //誰偷偷刪了這個我搞死他 by keliang
 
@@ -215,8 +227,9 @@ void setup() {
   digitalWrite(in5, 0);
   digitalWrite(in6, 0);
 
-  isReverse = EEPROM.read(1);
+  bool isReverse = (EEPROM.read(1)==0);
 }
+
 /*
 根據獲取的值執行對應指令
 1000：調速度狀態，不執行指令
@@ -234,32 +247,28 @@ void setup() {
 */
 int commendSwitch(int commend) {
   switch (commend) {
-    case 114:
-      return 1000;
-    case 111:
-      return 111;  //skip
-    case 110:
-      if (isReverse != 114) {
-        EEPROM.write(1, 114);
-        isReverse = 114;
-      } else {
+    case SET_SPEED:
+      set_speed();
+      return SET_SPEED;
+    case REVERSE:
+      if (isReverse) {
         EEPROM.write(1, 0);
-        isReverse = 0;
+        isReverse = false;
+      } else {
+        EEPROM.write(1, 1);
+        isReverse = true;
       }
       return 110;
     case 115:
-      /*speedLog[0] = 170;
-      speedLog[1] = 200;
-      rotatedSpeed_all = 170;
-      rotatedSpeed_single = 200;*/
       if (EEPROM.read(7) == 1) {
         speedLog[0] = EEPROM.read(5);
         speedLog[1] = EEPROM.read(6);
+        return SUCCESS;
       } else {
         speedLog[0] = 170;
         speedLog[1] = 200;
       }
-      return 115;
+      
     case 100:
       motor4();
       return 100;
@@ -329,15 +338,16 @@ int commendSwitch(int commend) {
     case CLOCKWISE_BACK_LEFT:
       motors(rotatedSpeed_single, 255, -255);
       return 26;
-    case 101:
+    case TEST:
       motors(130, 130, -200);
       return 101;
     default:
       motor_stop();
       motor4_stop();
-      return 999;
+      return UNEXPECTED_COMMAND;
   }
 }
+
 
 
 void loop() {
@@ -348,6 +358,9 @@ void loop() {
     rotatedSpeed_single = speedLog[1];
     rotatedSpeed_all = speedLog[0];
     dataReceived = Serial.read();
+    
+
+    /*
     if (stateLog == 1000) {
       if (isSetSpeed != 1) {
         rotatedSpeed_all = dataReceived;
@@ -365,10 +378,9 @@ void loop() {
         isSetSpeed = 0;
         dataReceived = 111;
       }
-    }
+    }*/
 
     stateLog = commendSwitch(dataReceived);
-
     stateLoged = stateLog;
   } else {
     if (Timer(1) == 0) {
@@ -377,6 +389,6 @@ void loop() {
       rotatedSpeed_single = 255;
       rotatedSpeed_all = 255;
     }
-    stateLog = commendSwitch(dataReceived);
+    //stateLog = commendSwitch(dataReceived);
   }
 }
