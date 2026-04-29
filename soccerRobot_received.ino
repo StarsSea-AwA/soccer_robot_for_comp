@@ -89,10 +89,12 @@ enum ERROR_CODES {
   SUCCESS = 0,
   UNEXPECTED_COMMAND,
   //TIMER
-  TIMER_OUT_OF_RANGE = 101,
+  TIMER_OUT_OF_RANGE = 1000,
   //MOTORS
-  SPEED_OUT_OF_RANGE = 201,
-  DEG_OUT_OF_RANGE = 202,
+  SPEED_OUT_OF_RANGE = 2001,
+  DEG_OUT_OF_RANGE = 2002,
+  //
+  TIME_OUT = 10086,
 };
 
 
@@ -243,6 +245,36 @@ void setup() {
   digitalWrite(in6, 0);
 
   bool isReverse = (EEPROM.read(1)==0);
+}
+
+int get_num (int num_byte = 2){
+  int final_num = 0; 
+  for (int i = 1; i < num_byte; i++){
+    Timer(0,START)
+    while (Serial.available() < 1 && Timer(0,GET_DURATION) < 1000) {
+      continue;
+    }
+    if (Timer(0) >= 1000){
+      return TIME_OUT;
+    }
+    final_num += Serial.read();
+  }
+  return final_num;
+}
+
+float get_float (float_byte = 2){
+  float final_float = 0.0;
+  for (int i = 1; i < _byte; i++){
+    Timer(0,START)
+    while (Serial.available() < 1 && Timer(0,GET_DURATION) < 1000) {
+      continue;
+    }
+    if (Timer(0) >= 1000){
+      return TIME_OUT;
+    }
+    final_float += Serial.read();
+  }
+  return final_float;
 }
 
 /*
