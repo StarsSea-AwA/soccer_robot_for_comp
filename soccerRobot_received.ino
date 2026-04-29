@@ -22,21 +22,21 @@ int stateLog = 0;
 int stateLoged = 0;
 int dataReceived = 0;
 
-int in1 = 2;
-int in2 = 4;
-int en1 = 3;
+uint8_t in1 = 2;
+uint8_t in2 = 4;
+uint8_t en1 = 3;
 
-int in3 = 5;
-int in4 = 7;
-int en2 = 6;
+uint8_t in3 = 5;
+uint8_t in4 = 7;
+uint8_t en2 = 6;
 
-int in5 = 8;
-int in6 = 9;
-int en3 = 10;
+uint8_t in5 = 8;
+uint8_t in6 = 9;
+uint8_t en3 = 10;
 
-int in7 = 12;
-int in8 = 13;
-int en4 = 11;
+uint8_t in7 = 12;
+uint8_t in8 = 13;
+uint8_t en4 = 11;
 
 unsigned long NoTimeLast[6] = { 0, 0, 0, 0, 0, 0 };
 
@@ -92,8 +92,8 @@ enum ERROR_CODES {
   TIMER_OUT_OF_RANGE = 201,
   //MOTORS
   
-
 };
+
 
 //電機1，即右前方那個，isclw是0~1（Flase-True）是否順時針
 void motor1(int isclw = 0, int speed = 255) {
@@ -297,10 +297,10 @@ int commendSwitch(int commend) {
       motors(0, 255, -255);
       return 6;
     case CLOCKWISE:
-      motors(-rotatedSpeed_all, -rotatedSpeed_all, -rotatedSpeed_all);
+      motors(rotatedSpeed_all, rotatedSpeed_all, rotatedSpeed_all);
       return 10;
     case ANTI_CLOCKWISE:
-      motors(rotatedSpeed_all, rotatedSpeed_all, rotatedSpeed_all);
+      motors(-rotatedSpeed_all, -rotatedSpeed_all, -rotatedSpeed_all);
       return 20;
     case ANTI_CLOCKWISE_FRONT_LEFT:
       motors(-255, 255, -rotatedSpeed_single);
@@ -348,9 +348,19 @@ int commendSwitch(int commend) {
   }
 }
 
+bool Test = false;
+void test(){
+  digitalWrite(5, 1);
+  digitalWrite(7, 0);
+  analogWrite(6,255);
+ //motors(255, 255, 255);
+}
 
 
 void loop() {
+  while (Test){
+    test();
+  }
 
   if (Serial.available()) {
     Timer(1, 2);
