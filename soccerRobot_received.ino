@@ -89,9 +89,10 @@ enum ERROR_CODES {
   SUCCESS = 0,
   UNEXPECTED_COMMAND,
   //TIMER
-  TIMER_OUT_OF_RANGE = 201,
+  TIMER_OUT_OF_RANGE = 101,
   //MOTORS
-  
+  SPEED_OUT_OF_RANGE = 201,
+  DEG_OUT_OF_RANGE = 202,
 };
 
 
@@ -149,6 +150,20 @@ void motor_stop() {
   analogWrite(en3, 0);
 }
 
+//deg 角度0~360,以正x轴为0，逆时针旋转，speed为0~255
+int to_derection (float deg, float speed = 255){
+  if (speed > 255){
+    return SPEED_OUT_OF_RANGE;
+  }
+  if (deg > 360){
+    return DEG_OUT_OF_RANGE;
+  }
+  float motor1_speed = cos((deg + 120.0) * PI / 180) * speed;
+  float motor2_speed = cos((deg - 120.0) * PI / 180) * speed;
+  float motor3_speed = cos((deg) * PI / 180) * speed;
+  motors(int(motor1_speed),int(motor2_speed),int(motor3_speed));
+  return SUCCESS;
+}
 
 //計時器，需要擴展可以改“NoTimeLast”數組的數量
 /*用法：Timer(計時器的序號，要做的事情（0~3）)
@@ -178,14 +193,14 @@ void motor4() {
   digitalWrite(in7, 1);
   digitalWrite(in8, 0);
   analogWrite(en4, 255);
-  Timer(3, 1);
+  Timer(3, START);
 }
 
 void motor4_stop() {
   digitalWrite(in7, 0);
   digitalWrite(in8, 0);
   analogWrite(en4, 0);
-  Timer(3, 2);
+  Timer(3, RESET);
 }
 
 int set_speed() {
