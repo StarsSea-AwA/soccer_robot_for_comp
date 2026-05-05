@@ -4,7 +4,8 @@
 為避免不便，該程序基於以下標準：
 - in1 = 2, en1 =3, in2 = 4以此類推(in5-6和en3是8，9，10)
 - 接綫方面，電機驅動OUTPUT位置單數位需連接電機上面的銅片
-- motor1 在該程序中為右前方的電機（以兩個電機那面為前方）然後順時針分別是motor2,3如下：
+- motor1
+在該程序中為右前方的電機（以兩個電機那面為前方）然後順時針分別是motor2,3如下：
    ——
 m3    m1
  \    /
@@ -12,10 +13,10 @@ m3    m1
 ...
 */
 
-#include <math.h>
 #include <EEPROM.h>
+#include <math.h>
 
-int moveSpeed = 255;  //
+int moveSpeed = 255; //
 int rotatedSpeed_all = 170;
 int rotatedSpeed_single = 200;
 int stateLog = 0;
@@ -38,11 +39,11 @@ int in7 = 12;
 int in8 = 13;
 int en4 = 11;
 
-unsigned long NoTimeLast[6] = { 0, 0, 0, 0, 0, 0 };
+unsigned long NoTimeLast[6] = {0, 0, 0, 0, 0, 0};
 
 int isSetSpeed = 0;
 
-int speedLog[2] = { 170, 200 };
+int speedLog[2] = {170, 200};
 
 int i1 = 1;
 
@@ -88,14 +89,13 @@ enum TIMER_MODES {
 enum ERROR_CODES {
   SUCCESS = 0,
   UNEXPECTED_COMMAND,
-  //TIMER
+  // TIMER
   TIMER_OUT_OF_RANGE = 201,
-  //MOTORS
-  
+  // MOTORS
 
 };
 
-//電機1，即右前方那個，isclw是0~1（Flase-True）是否順時針
+// 電機1，即右前方那個，isclw是0~1（Flase-True）是否順時針
 void motor1(int isclw = 0, int speed = 255) {
   analogWrite(en1, speed);
   if (isclw == 1) {
@@ -106,7 +106,7 @@ void motor1(int isclw = 0, int speed = 255) {
     digitalWrite(in2, 0);
   }
 }
-//電機2，即後面那個，isclw是0~1（Flase-True）是否順時針
+// 電機2，即後面那個，isclw是0~1（Flase-True）是否順時針
 void motor2(int isclw = 0, int speed = 255) {
   analogWrite(en2, speed);
   if (isclw == 1) {
@@ -117,7 +117,7 @@ void motor2(int isclw = 0, int speed = 255) {
     digitalWrite(in4, 0);
   }
 }
-//電機3，即左前方那個，isclw是0~1（Flase-True）是否順時針
+// 電機3，即左前方那個，isclw是0~1（Flase-True）是否順時針
 void motor3(int isclw = 0, int speed = 255) {
   analogWrite(en3, speed);
   if (isclw == 1) {
@@ -129,9 +129,7 @@ void motor3(int isclw = 0, int speed = 255) {
   }
 }
 
-
-
-//看其他人是怎麽幹的，是的，一個函數就可以控制3個電機了（原理就是吧之前的三個拼接起來）
+// 看其他人是怎麽幹的，是的，一個函數就可以控制3個電機了（原理就是吧之前的三個拼接起來）
 void motors(int speed1, int speed2, int speed3) {
   if (isReverse) {
     speed1 = -speed1;
@@ -142,15 +140,14 @@ void motors(int speed1, int speed2, int speed3) {
   motor2(int(speed2 >= 0), abs(speed2));
   motor3(int(speed3 >= 0), abs(speed3));
 }
-//讓電機停止的函數
+// 讓電機停止的函數
 void motor_stop() {
   analogWrite(en1, 0);
   analogWrite(en2, 0);
   analogWrite(en3, 0);
 }
 
-
-//計時器，需要擴展可以改“NoTimeLast”數組的數量
+// 計時器，需要擴展可以改“NoTimeLast”數組的數量
 /*用法：Timer(計時器的序號，要做的事情（0~3）)
 mode = 0時，該函數返回距離上次記錄起始時間的值(ms)
 mode = 1時，記錄現在時間，記錄該計時器的起始值(ms)
@@ -190,14 +187,14 @@ void motor4_stop() {
 
 int set_speed() {
   rotatedSpeed_all = Serial.read();
-  EEPROM.write(5,rotatedSpeed_all);
+  EEPROM.write(5, rotatedSpeed_all);
   rotatedSpeed_single = Serial.read();
-  EEPROM.write(6,rotatedSpeed_single);
+  EEPROM.write(6, rotatedSpeed_single);
   return SUCCESS;
 }
 
 void setup() {
-  Serial.begin(9600);  //誰偷偷刪了這個我搞死他 by keliang
+  Serial.begin(9600); // 誰偷偷刪了這個我搞死他 by keliang
 
   pinMode(en1, OUTPUT);
   pinMode(in1, OUTPUT);
@@ -227,7 +224,7 @@ void setup() {
   digitalWrite(in5, 0);
   digitalWrite(in6, 0);
 
-  bool isReverse = (EEPROM.read(1)==0);
+  bool isReverse = (EEPROM.read(1) == 0);
 }
 
 /*
@@ -247,118 +244,115 @@ void setup() {
 */
 int commendSwitch(int commend) {
   switch (commend) {
-    case SET_SPEED:
-      set_speed();
-      return SET_SPEED;
-    case REVERSE:
-      if (isReverse) {
-        EEPROM.write(1, 0);
-        isReverse = false;
-      } else {
-        EEPROM.write(1, 1);
-        isReverse = true;
-      }
-      return 110;
-    case 115:
-      if (EEPROM.read(7) == 1) {
-        speedLog[0] = EEPROM.read(5);
-        speedLog[1] = EEPROM.read(6);
-        return SUCCESS;
-      } else {
-        speedLog[0] = 170;
-        speedLog[1] = 200;
-      }
-      
-    case 100:
-      motor4();
-      return 100;
-    case 99:
-      motor4_stop();
-      return 99;
-    case STOP:
-      motor_stop();
-      return 0;
-    case FRONT_LEFT:
-      motors(-255, 255, 0);
-      return 1;
-    case FORWARD:
-      motors(-255, 0, 255);
-      return 2;
-    case FRONT_RIGHT:
-      motors(0, -255, 255);
-      return 3;
-    case BACK_RIGHT:
-      motors(255, -255, 0);
-      return 4;
-    case BACKWARD:
-      motors(255, 0, -255);
-      return 5;
-    case BACK_LEFT:
-      motors(0, 255, -255);
-      return 6;
-    case CLOCKWISE:
-      motors(-rotatedSpeed_all, -rotatedSpeed_all, -rotatedSpeed_all);
-      return 10;
-    case ANTI_CLOCKWISE:
-      motors(rotatedSpeed_all, rotatedSpeed_all, rotatedSpeed_all);
-      return 20;
-    case ANTI_CLOCKWISE_FRONT_LEFT:
-      motors(-255, 255, -rotatedSpeed_single);
-      return 11;
-    case ANTI_CLOCKWISE_FORWARD:
-      motors(-255, -rotatedSpeed_single, 255);
-      return ANTI_CLOCKWISE_FRONT_RIGHT;
-    case ANTI_CLOCKWISE_FRONT_RIGHT:
-      motors(-rotatedSpeed_single, -255, 255);
-      return 13;
-    case ANTI_CLOCKWISE_BACK_RIGHT:
-      motors(255, -255, -rotatedSpeed_single);
-      return 14;
-    case ANTI_CLOCKWISE_BACKWARD:
-      motors(255, -rotatedSpeed_single, -255);
-      return 15;
-    case ANTI_CLOCKWISE_BACK_LEFT:
-      motors(-rotatedSpeed_single, 255, -255);
-      return 16;
-    case CLOCKWISE_FRONT_LEFT:
-      motors(-255, 255, rotatedSpeed_single);
-      return 21;
-    case CLOCKWISE_FORWARD:
-      motors(-255, rotatedSpeed_single, 255);
-      return 22;
-    case CLOCKWISE_FRONT_RIGHT:
-      motors(rotatedSpeed_single, -255, 255);
-      return 23;
-    case CLOCKWISE_BACK_RIGHT:
-      motors(255, -255, rotatedSpeed_single);
-      return 24;
-    case CLOCKWISE_BACKWARD:
-      motors(255, rotatedSpeed_single, -255);
-      return 25;
-    case CLOCKWISE_BACK_LEFT:
-      motors(rotatedSpeed_single, 255, -255);
-      return 26;
-    case TEST:
-      motors(130, 130, -200);
-      return 101;
-    default:
-      motor_stop();
-      motor4_stop();
-      return UNEXPECTED_COMMAND;
+  case SET_SPEED:
+    set_speed();
+    return SET_SPEED;
+  case REVERSE:
+    if (isReverse) {
+      EEPROM.write(1, 0);
+      isReverse = false;
+    } else {
+      EEPROM.write(1, 1);
+      isReverse = true;
+    }
+    return 110;
+  case 115:
+    if (EEPROM.read(7) == 1) {
+      speedLog[0] = EEPROM.read(5);
+      speedLog[1] = EEPROM.read(6);
+      return SUCCESS;
+    } else {
+      speedLog[0] = 170;
+      speedLog[1] = 200;
+    }
+
+  case 100:
+    motor4();
+    return 100;
+  case 99:
+    motor4_stop();
+    return 99;
+  case STOP:
+    motor_stop();
+    return 0;
+  case FRONT_LEFT:
+    motors(-255, 255, 0);
+    return 1;
+  case FORWARD:
+    motors(-255, 0, 255);
+    return 2;
+  case FRONT_RIGHT:
+    motors(0, -255, 255);
+    return 3;
+  case BACK_RIGHT:
+    motors(255, -255, 0);
+    return 4;
+  case BACKWARD:
+    motors(255, 0, -255);
+    return 5;
+  case BACK_LEFT:
+    motors(0, 255, -255);
+    return 6;
+  case CLOCKWISE:
+    motors(-rotatedSpeed_all, -rotatedSpeed_all, -rotatedSpeed_all);
+    return 10;
+  case ANTI_CLOCKWISE:
+    motors(rotatedSpeed_all, rotatedSpeed_all, rotatedSpeed_all);
+    return 20;
+  case ANTI_CLOCKWISE_FRONT_LEFT:
+    motors(-255, 255, -rotatedSpeed_single);
+    return 11;
+  case ANTI_CLOCKWISE_FORWARD:
+    motors(-255, -rotatedSpeed_single, 255);
+    return ANTI_CLOCKWISE_FRONT_RIGHT;
+  case ANTI_CLOCKWISE_FRONT_RIGHT:
+    motors(-rotatedSpeed_single, -255, 255);
+    return 13;
+  case ANTI_CLOCKWISE_BACK_RIGHT:
+    motors(255, -255, -rotatedSpeed_single);
+    return 14;
+  case ANTI_CLOCKWISE_BACKWARD:
+    motors(255, -rotatedSpeed_single, -255);
+    return 15;
+  case ANTI_CLOCKWISE_BACK_LEFT:
+    motors(-rotatedSpeed_single, 255, -255);
+    return 16;
+  case CLOCKWISE_FRONT_LEFT:
+    motors(-255, 255, rotatedSpeed_single);
+    return 21;
+  case CLOCKWISE_FORWARD:
+    motors(-255, rotatedSpeed_single, 255);
+    return 22;
+  case CLOCKWISE_FRONT_RIGHT:
+    motors(rotatedSpeed_single, -255, 255);
+    return 23;
+  case CLOCKWISE_BACK_RIGHT:
+    motors(255, -255, rotatedSpeed_single);
+    return 24;
+  case CLOCKWISE_BACKWARD:
+    motors(255, rotatedSpeed_single, -255);
+    return 25;
+  case CLOCKWISE_BACK_LEFT:
+    motors(rotatedSpeed_single, 255, -255);
+    return 26;
+  case TEST:
+    motors(130, 130, -200);
+    return 101;
+  default:
+    motor_stop();
+    motor4_stop();
+    return UNEXPECTED_COMMAND;
   }
 }
-
-
 
 void loop() {
 
   if (Serial.available()) {
     Timer(1, 2);
-    
+
     rotatedSpeed_single = speedLog[1];
     rotatedSpeed_all = speedLog[0];
     dataReceived = Serial.read();
-    
 
     /*
     if (stateLog == 1000) {
@@ -389,6 +383,6 @@ void loop() {
       rotatedSpeed_single = 255;
       rotatedSpeed_all = 255;
     }
-    //stateLog = commendSwitch(dataReceived);
+    // stateLog = commendSwitch(dataReceived);
   }
 }
