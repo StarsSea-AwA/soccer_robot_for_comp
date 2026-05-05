@@ -48,6 +48,11 @@ int i1 = 1;
 
 bool isReverse = false;
 
+int motor1_status = 0;
+int motor2_status = 0;
+int motor3_status = 0;
+int motor4_status = 0;
+
 enum commends {
   STOP = 0,
   FRONT_LEFT,
@@ -85,11 +90,19 @@ enum TIMER_MODES {
   RESET,
 };
 
+enum TIMER_USADEG {
+  TIMEOUT = 0,//PLANNING
+  ROTATE = 1,
+  MOVEFOR = 2,
+
+};
+
 enum ERROR_CODES {
   SUCCESS = 0,
   UNEXPECTED_COMMAND,
   //TIMER
   TIMER_OUT_OF_RANGE = 1000,
+  UNEXPECTED_MODE,
   //MOTORS
   SPEED_OUT_OF_RANGE = 2001,
   DEG_OUT_OF_RANGE = 2002,
@@ -99,7 +112,7 @@ enum ERROR_CODES {
 
 
 //電機1，即右前方那個，isclw是0~1（Flase-True）是否順時針
-void motor1(int isclw = 0, int speed = 255) {
+void motor1(bool isclw = 0, int speed = 255) {
   analogWrite(en1, speed);
   if (isclw == 1) {
     digitalWrite(in1, 0);
@@ -110,7 +123,7 @@ void motor1(int isclw = 0, int speed = 255) {
   }
 }
 //電機2，即後面那個，isclw是0~1（Flase-True）是否順時針
-void motor2(int isclw = 0, int speed = 255) {
+void motor2(bool isclw = 0, int speed = 255) {
   analogWrite(en2, speed);
   if (isclw == 1) {
     digitalWrite(in3, 0);
@@ -121,7 +134,7 @@ void motor2(int isclw = 0, int speed = 255) {
   }
 }
 //電機3，即左前方那個，isclw是0~1（Flase-True）是否順時針
-void motor3(int isclw = 0, int speed = 255) {
+void motor3(bool isclw = 0, int speed = 255) {
   analogWrite(en3, speed);
   if (isclw == 1) {
     digitalWrite(in5, 0);
@@ -130,6 +143,7 @@ void motor3(int isclw = 0, int speed = 255) {
     digitalWrite(in5, 1);
     digitalWrite(in6, 0);
   }
+  
 }
 
 
@@ -167,42 +181,38 @@ int to_derection (float deg, float speed = 255){
   return SUCCESS;
 }
 
-//計時器，需要擴展可以改“NoTimeLast”數組的數量
-/*用法：Timer(計時器的序號，要做的事情（0~3）)
-mode = 0時，該函數返回距離上次記錄起始時間的值(ms)
-mode = 1時，記錄現在時間，記錄該計時器的起始值(ms)
-mode = 2時，重置該計時器
-*/
-int Timer(int Notimer = 0, int mode = 0) {
-  if (Notimer > 5) {
-    return TIMER_OUT_OF_RANGE;
-  }
-  if (mode == 1) {
-    NoTimeLast[Notimer] = millis();
-    return SUCCESS;
-  } else if (mode == 2) {
-    NoTimeLast[Notimer] = 0;
-    return SUCCESS;
-  }
-  if (NoTimeLast[Notimer] <= 0) {
-    NoTimeLast[Notimer] = 0;
-    return SUCCESS;
-  }
-  return int(millis() - NoTimeLast[Notimer]);
-}
+
+struct timer{
+  unsigned long time_last;
+};
+struct timer rotate_speed_up = {0};
+struct timer timeout = {0};
+struct timer turn_while_move_duration = {0};
+int timer(struct timer *t, enum TIMER_MODES mode){
+  switch (mode) {
+    case RESET:
+      t->time_last = millis();
+      return SUCCESS;
+    case GET_DURATION:
+      return int(millis() - t->time_last);
+    default:
+      return UNEXPECTED_MODE;
+  };
+};
 
 void motor4() {
   digitalWrite(in7, 1);
   digitalWrite(in8, 0);
   analogWrite(en4, 255);
-  Timer(3, START);
+  
+  //timer(3, START);
 }
 
 void motor4_stop() {
   digitalWrite(in7, 0);
   digitalWrite(in8, 0);
   analogWrite(en4, 0);
-  Timer(3, RESET);
+  //Timer(3, RESET);
 }
 
 int set_speed() {
@@ -250,11 +260,11 @@ void setup() {
 int get_num (int num_byte = 2){
   int final_num = 0; 
   for (int i = 1; i < num_byte; i++){
-    Timer(0,START)
-    while (Serial.available() < 1 && Timer(0,GET_DURATION) < 1000) {
+    timer(&timeout,START);
+    while (Serial.available() < 1 && timer(&timeout,GET_DURATION) < 1000) {
       continue;
     }
-    if (Timer(0) >= 1000){
+    if (timer(&timeout, START) >= 1000){
       return TIME_OUT;
     }
     final_num += Serial.read();
@@ -262,14 +272,14 @@ int get_num (int num_byte = 2){
   return final_num;
 }
 
-float get_float (float_byte = 2){
+float get_float (int float_byte = 2){
   float final_float = 0.0;
-  for (int i = 1; i < _byte; i++){
-    Timer(0,START)
-    while (Serial.available() < 1 && Timer(0,GET_DURATION) < 1000) {
+  for (int i = 1; i < float_byte; i++){
+    timer(&timeout,START);
+    while (Serial.available() < 1 && timer(&timeout,GET_DURATION) < 1000) {
       continue;
     }
-    if (Timer(0) >= 1000){
+    if (timer(&timeout,GET_DURATION) >= 1000){
       return TIME_OUT;
     }
     final_float += Serial.read();
@@ -400,49 +410,46 @@ void test(){
   digitalWrite(5, 1);
   digitalWrite(7, 0);
   analogWrite(6,255);
- //motors(255, 255, 255);
 }
 
-
 void loop() {
+  
   while (Test){
     test();
   }
-
   if (Serial.available()) {
-    Timer(1, 2);
+    timer(&rotate_speed_up, RESET);
     
     rotatedSpeed_single = speedLog[1];
     rotatedSpeed_all = speedLog[0];
     dataReceived = Serial.read();
-    
 
-    /*
-    if (stateLog == 1000) {
-      if (isSetSpeed != 1) {
-        rotatedSpeed_all = dataReceived;
-        speedLog[0] = dataReceived;
-        EEPROM.write(5, dataReceived);
-        isSetSpeed = 1;
-        dataReceived = 114;
-      } else {
-        rotatedSpeed_single = dataReceived;
-        speedLog[1] = dataReceived;
-        EEPROM.write(6, dataReceived);
-        if (EEPROM.read(7) != 1) {
-          EEPROM.write(7, 1);
-        }
-        isSetSpeed = 0;
-        dataReceived = 111;
+    stateLog = commendSwitch(dataReceived);
+
+    if (stateLog > 10 && stateLog != 20 && stateLog < 30){
+      timer(&turn_while_move_duration, RESET);
+    }
+/*
+    if (
+      !(stateLog > 10 && stateLog != 20 && stateLog < 30) 
+      && (stateLoged > 10 && stateLoged != 20 && stateLoged < 30) 
+      && (timer(turn_while_move_duration, GET_DURATION) > 500)
+      && 
+      ){
+      int 
+      
+      switch (stateLoged) {
+        case FRONT_LEFT:
+          motor1()
       }
     }*/
 
-    stateLog = commendSwitch(dataReceived);
+
     stateLoged = stateLog;
   } else {
-    if (Timer(1) == 0) {
-      Timer(1, 1);
-    } else if ((stateLog >= 10) && (Timer(1) >= 1500) && (stateLog < 30)) {
+    if (timer(&rotate_speed_up,GET_DURATION) == 0) {
+      timer(&rotate_speed_up, RESET);
+    } else if ((stateLog >= 10) && (timer(&rotate_speed_up, GET_DURATION) >= 1500) && (stateLog < 30)) {
       rotatedSpeed_single = 255;
       rotatedSpeed_all = 255;
     }
