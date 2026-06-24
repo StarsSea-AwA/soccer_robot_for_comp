@@ -69,7 +69,7 @@ enum commends {
   ANTI_CLOCKWISE_BACK_RIGHT,
   ANTI_CLOCKWISE_BACKWARD,
   ANTI_CLOCKWISE_BACK_LEFT,
-  
+
   CLOCKWISE = 20,
   CLOCKWISE_FRONT_LEFT,
   CLOCKWISE_FORWARD,
@@ -83,6 +83,9 @@ enum commends {
   TEST = 101,
   REVERSE = 110,
   SET_SPEED = 114,
+  SET_SPEED_ING = 1141,
+  SET_MOVING_SPEED = 115,
+  SET_MOVING_SPEED_ING = 1151,
   SKIP = 1000,
 };
 
@@ -110,6 +113,13 @@ enum ERROR_CODES {
   DEG_OUT_OF_RANGE = 2002,
   //
   TIME_OUT = 10086,
+};
+
+enum EEPROM_NO {
+  isREVERSE = 1,
+  ROTATE_SPEED_ALL = 5,
+  ROTATE_SPEED_SINGLE,
+  MOVING_SPEED
 };
 
 
@@ -145,7 +155,7 @@ void motor3(bool isclw = 0, int speed = 255) {
     digitalWrite(in5, 1);
     digitalWrite(in6, 0);
   }
-  
+
 }
 
 
@@ -206,7 +216,7 @@ void motor4() {
   digitalWrite(in7, 1);
   digitalWrite(in8, 0);
   analogWrite(en4, 255);
-  
+
   //timer(3, START);
 }
 
@@ -217,11 +227,18 @@ void motor4_stop() {
   //Timer(3, RESET);
 }
 
-int set_speed() {
-  rotatedSpeed_all = Serial.read();
+
+int set_rotating_speed(int speed_all, int speed_single) {
+  rotatedSpeed_all = speed_all;
   EEPROM.write(5,rotatedSpeed_all);
-  rotatedSpeed_single = Serial.read();
+  rotatedSpeed_single = speed_single;
   EEPROM.write(6,rotatedSpeed_single);
+  return SUCCESS;
+}
+
+int set_moving_speed(int speed){
+  moveSpeed = speed;
+  EEPROM.write(MOVING_SPEED,moveSpeed);
   return SUCCESS;
 }
 
@@ -260,7 +277,7 @@ void setup() {
 }
 
 int get_num (int num_byte = 2){
-  int final_num = 0; 
+  int final_num = 0;
   for (int i = 1; i < num_byte; i++){
     timer(&timeout,START);
     while (Serial.available() < 1 && timer(&timeout,GET_DURATION) < 1000) {
@@ -306,9 +323,38 @@ float get_float (int float_byte = 2){
 */
 int commendSwitch(int commend) {
   switch (commend) {
-    case SET_SPEED:
-      set_speed();
+
+    case SET_SPEED: {
+      int i = 0;
+      int all_speed = 0;
+      unsigned long speed_timeout = millis();
+      while (i < 2){
+        if (Serial.available() && i == 0){
+          all_speed = Serial.read();
+          i = 1;
+          speed_timeout = millis();
+        }
+        else if (Serial.available() && i == 1){
+          set_rotating_speed(all_speed, Serial.read());
+          i = 2;
+        }
+        if (millis() - speed_timeout > 1000) {
+          return TIME_OUT;
+        }
+      }
       return SET_SPEED;
+    }
+    case SET_MOVING_SPEED: {
+      unsigned long speed_timeout = millis();
+      while (millis() - speed_timeout < 60000){
+        if (Serial.available()){
+          set_moving_speed(Serial.read());
+          return SET_MOVING_SPEED;
+        }
+      }
+      return TIME_OUT;
+    }
+
     case REVERSE:
       if (isReverse) {
         EEPROM.write(1, 0);
@@ -318,17 +364,8 @@ int commendSwitch(int commend) {
         isReverse = true;
       }
       return 110;
-    case 115:
-      if (EEPROM.read(7) == 1) {
-        speedLog[0] = EEPROM.read(5);
-        speedLog[1] = EEPROM.read(6);
-        return SUCCESS;
-      } else {
-        speedLog[0] = 170;
-        speedLog[1] = 200;
-      }
-      return 115;
-      
+
+
     case 100:
       motor4();
       return 100;
@@ -369,7 +406,7 @@ int commendSwitch(int commend) {
       motors(moveSpeed, -rotatedSpeed_single, -moveSpeed);
       return 12;
     case ANTI_CLOCKWISE_FRONT_RIGHT:
-      motors;
+      motors(moveSpeed, -moveSpeed, -rotatedSpeed_single);
       return 13;
     case ANTI_CLOCKWISE_BACK_RIGHT:
       motors(-rotatedSpeed_single, -moveSpeed, moveSpeed);
@@ -407,7 +444,7 @@ int commendSwitch(int commend) {
       return UNEXPECTED_COMMAND;
   }
 }
-
+void nothing(){}
 bool Test = false;
 void test(){
   digitalWrite(5, 1);
@@ -416,14 +453,11 @@ void test(){
 }
 
 void loop() {
-  
+
   if (Serial.available()) {
     timer(&rotate_speed_up, RESET);
-    
-    rotatedSpeed_single = speedLog[1];
-    rotatedSpeed_all = speedLog[0];
-    dataReceived = Serial.read();
 
+    dataReceived = Serial.read();
     stateLog = commendSwitch(dataReceived);
 
     /*if (stateLog > 10 && stateLog != 20 && stateLog < 30){
@@ -431,13 +465,13 @@ void loop() {
     }*/
 /*
     if (
-      !(stateLog > 10 && stateLog != 20 && stateLog < 30) 
-      && (stateLoged > 10 && stateLoged != 20 && stateLoged < 30) 
+      !(stateLog > 10 && stateLog != 20 && stateLog < 30)
+      && (stateLoged > 10 && stateLoged != 20 && stateLoged < 30)
       && (timer(turn_while_move_duration, GET_DURATION) > 500)
-      && 
+      &&
       ){
-      int 
-      
+      int
+
       switch (stateLoged) {
         case FRONT_LEFT:
           motor1()
