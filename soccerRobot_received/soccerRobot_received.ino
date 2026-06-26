@@ -103,7 +103,7 @@ enum TIMER_USADEG {
 };
 
 enum ERROR_CODES {
-  SUCCESS = 0,
+  SUCCESS = 1145,
   UNEXPECTED_COMMAND,
   //TIMER
   TIMER_OUT_OF_RANGE = 1000,
@@ -230,9 +230,9 @@ void motor4_stop() {
 
 int set_rotating_speed(int speed_all, int speed_single) {
   rotatedSpeed_all = speed_all;
-  EEPROM.write(5,rotatedSpeed_all);
+  EEPROM.write(ROTATE_SPEED_ALL,rotatedSpeed_all);
   rotatedSpeed_single = speed_single;
-  EEPROM.write(6,rotatedSpeed_single);
+  EEPROM.write(ROTATE_SPEED_SINGLE,rotatedSpeed_single);
   return SUCCESS;
 }
 
@@ -274,12 +274,13 @@ void setup() {
   digitalWrite(in6, 0);
 
   isReverse = (EEPROM.read(1)!=0);
+  moveSpeed = EEPROM.read(MOVING_SPEED);
 }
 
 int get_num (int num_byte = 2){
   int final_num = 0;
   for (int i = 1; i < num_byte; i++){
-    timer(&timeout,START);
+    timer(&timeout,RESET);
     while (Serial.available() < 1 && timer(&timeout,GET_DURATION) < 1000) {
       continue;
     }
@@ -294,7 +295,7 @@ int get_num (int num_byte = 2){
 float get_float (int float_byte = 2){
   float final_float = 0.0;
   for (int i = 1; i < float_byte; i++){
-    timer(&timeout,START);
+    timer(&timeout,RESET);
     while (Serial.available() < 1 && timer(&timeout,GET_DURATION) < 1000) {
       continue;
     }
@@ -338,18 +339,15 @@ int commendSwitch(int commend) {
           set_rotating_speed(all_speed, Serial.read());
           i = 2;
         }
-        if (millis() - speed_timeout > 1000) {
-          return TIME_OUT;
-        }
       }
-      return SET_SPEED;
+      return SUCCESS;
     }
     case SET_MOVING_SPEED: {
       unsigned long speed_timeout = millis();
       while (millis() - speed_timeout < 60000){
         if (Serial.available()){
           set_moving_speed(Serial.read());
-          return SET_MOVING_SPEED;
+          return SUCCESS;
         }
       }
       return TIME_OUT;
@@ -456,6 +454,9 @@ void loop() {
 
   if (Serial.available()) {
     timer(&rotate_speed_up, RESET);
+    rotatedSpeed_all = EEPROM.read(ROTATE_SPEED_ALL);
+    rotatedSpeed_single = EEPROM.read(ROTATE_SPEED_SINGLE);
+
 
     dataReceived = Serial.read();
     stateLog = commendSwitch(dataReceived);
@@ -481,12 +482,20 @@ void loop() {
 
     stateLoged = stateLog;
   } else {
+    /*
     if (timer(&rotate_speed_up,GET_DURATION) == 0) {
       timer(&rotate_speed_up, RESET);
-    } else if ((stateLog >= 10) && (timer(&rotate_speed_up, GET_DURATION) >= 1500) && (stateLog < 30)) {
+    } else */
+    if ((stateLog >= 10) && (timer(&rotate_speed_up, GET_DURATION) >= 1500) && (stateLog < 30)) {
       rotatedSpeed_single = 255;
       rotatedSpeed_all = 255;
+      stateLog = commendSwitch(dataReceived);
     }
-    //stateLog = commendSwitch(dataReceived);
+
+    //else {
+    //  rotatedSpeed_all = EEPROM.read(ROTATE_SPEED_ALL);
+    //  rotatedSpeed_single = EEPROM.read(ROTATE_SPEED_SINGLE);
+    //}
+    
   }
 }
